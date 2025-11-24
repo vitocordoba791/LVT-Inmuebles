@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inmuebles LVT</title>
+    <style>
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: black;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav a {
+            color: white; margin-left: 15px; text-decoration: none;
+            padding: 6px 12px; border-radius: 5px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .buscador-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 70vh;
+            flex-direction: column;
+        }
+
+        .buscador {
+            width: 60%;
+            max-width: 700px;
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border-radius: 40px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 10px 20px;
+        }
+
+        .buscador input[type="text"] {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 18px;
+            padding: 10px;
+            border-radius: 40px;
+        }
+
+        .buscador button {
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 10px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .buscador button:hover {
+            background-color: #444;
+        }
+
+        .mensaje {
+            text-align: center;
+            color: #555;
+            font-size: 18px;
+            margin-top: 30px;
+        }
+
+        a.login {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        a.login:hover {
+            text-decoration: underline;
+        }
+        .card {
+            background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 15px;
+        }
+    </style>
+</head>
+<body>
+
+
+<header>
+    <h1> Inmuebles LVT</h1>
+        <div class="nav">
+            {% if session.get('usuario') %}
+            <a href="/agregar" class="boton">➕ Publicar Inmueble</a>
+            <a href="/logout" class="boton">🚪 Cerrar sesión</a>
+            <a href="/crear_pago" target="_blank" class="btn btn-primary">💳 Pagar Alquiler </a>
+        {% else %}
+            <a href="/login" class="boton">🔐 Iniciar sesión</a>
+        {% endif %}
+        </div>
+</header>
+
+<div class="buscador-container">
+    <h2>Buscar Propiedades</h2>
+    <form class="buscador" action="/buscar" method="GET">
+        <input type="text" name="q" placeholder="Buscar por ubicación, tipo o precio...">
+        <button type="submit">Buscar</button>
+    </form>
+    <div class="mensaje">No hay propiedades disponibles.</div>
+</div>
+
+</body>
+</html>
