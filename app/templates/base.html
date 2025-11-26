@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LVT Inmuebles</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="{{ url_for('main.inicio') }}">LVT Inmuebles</a>
+    <div class="spacer"></div>
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('propiedades.crear') }}">Publicar</a>
+      <a href="{{ url_for('auth.logout') }}">Salir</a>
+    {% else %}
+      <a href="{{ url_for('auth.login') }}">Ingresar</a>
+      <a href="{{ url_for('auth.register') }}">Registrarse</a>
+    {% endif %}
+  </nav>
+  <main class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="flash">
+          {% for msg in messages %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

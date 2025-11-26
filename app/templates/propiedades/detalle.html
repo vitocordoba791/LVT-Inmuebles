@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<article class="property-detail">
+  <h1>{{ propiedad.titulo }}</h1>
+  
+  <div class="property-info">
+    <p class="property-price">$ {{ '%.2f'|format(propiedad.precio) }}</p>
+    <p class="property-address">
+      <i class="icon-location"></i> {{ propiedad.direccion }}
+    </p>
+    
+    <div class="property-description">
+      <h3>Descripción</h3>
+      <p>{{ propiedad.descripcion|nl2br }}</p>
+    </div>
+    
+    <div class="property-actions">
+      {% if current_user.is_authenticated %}
+        {% if current_user.id != propiedad.propietario_id %}
+          <a href="{{ url_for('pago.pagar', propiedad_id=propiedad.id) }}" 
+             class="btn btn-accent">
+            Comprar propiedad
+          </a>
+        {% else %}
+          <div class="owner-actions">
+            <a href="{{ url_for('propiedades.editar', propiedad_id=propiedad.id) }}" 
+               class="btn btn-outline">
+              Editar propiedad
+            </a>
+            <form action="{{ url_for('propiedades.eliminar', propiedad_id=propiedad.id) }}" 
+                  method="post" 
+                  class="delete-form"
+                  onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta propiedad? Esta acción no se puede deshacer.');">
+              <button type="submit" class="btn btn-danger">Eliminar propiedad</button>
+            </form>
+          </div>
+        {% endif %}
+      {% else %}
+        <p class="login-prompt">
+          <a href="{{ url_for('auth.login') }}">Inicia sesión</a> para comprar esta propiedad.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <div class="property-owner">
+    <h3>Publicado por</h3>
+    <p>{{ propiedad.propietario.nombre_usuario }}</p>
+  </div>
+</article>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.property-detail {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.property-price {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--primary);
+  margin: 1rem 0;
+}
+
+.property-address {
+  color: var(--muted);
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.property-description {
+  margin: 2rem 0;
+  line-height: 1.6;
+}
+
+.property-actions {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.owner-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.delete-form {
+  margin: 0;
+}
+
+.login-prompt {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+</style>
+{% endblock %}

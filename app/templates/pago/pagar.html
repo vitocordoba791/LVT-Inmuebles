@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="checkout-container">
+  <h1>Confirmar Compra</h1>
+  
+  <div class="property-summary">
+    <h2>{{ propiedad.titulo }}</h2>
+    <p class="property-address">{{ propiedad.direccion }}</p>
+    <div class="price-section">
+      <span class="price-label">Precio:</span>
+      <span class="price-amount">$ {{ '%.2f'|format(propiedad.precio) }}</span>
+    </div>
+  </div>
+  
+  <div class="payment-details">
+    <h3>Detalles del Pago</h3>
+    <p>Estás a punto de comprar esta propiedad. Al confirmar, se iniciará el proceso de pago.</p>
+    
+    <form method="post" class="payment-form">
+      <div class="form-group">
+        <label for="card_number">Número de tarjeta</label>
+        <input type="text" id="card_number" name="card_number" 
+               placeholder="1234 5678 9012 3456" required
+               pattern="[0-9\s]{13,19}">
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="expiry">Vencimiento</label>
+          <input type="text" id="expiry" name="expiry" 
+                 placeholder="MM/AA" required
+                 pattern="(0[1-9]|1[0-2])\/[0-9]{2}">
+        </div>
+        
+        <div class="form-group">
+          <label for="cvv">CVV</label>
+          <input type="text" id="cvv" name="cvv" 
+                 placeholder="123" required
+                 pattern="[0-9]{3,4}">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="card_name">Nombre en la tarjeta</label>
+        <input type="text" id="card_name" name="card_name" required>
+      </div>
+      
+      <div class="form-actions">
+        <a href="{{ url_for('propiedades.detalle', propiedad_id=propiedad.id) }}" 
+           class="btn btn-outline">
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-accent">
+          Confirmar Pago
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <div class="payment-security">
+    <div class="security-badge">
+      <i class="icon-lock"></i>
+      <span>Pago seguro</span>
+    </div>
+    <p>Tus datos están protegidos con encriptación SSL de 256 bits.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.checkout-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: var(--card);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.property-summary {
+  background: var(--soft-blue);
+  border: 1px solid var(--soft-blue-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.property-summary h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--primary);
+}
+
+.property-address {
+  color: var(--muted);
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.price-section {
+  display: flex;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.price-label {
+  font-weight: 600;
+  margin-right: 1rem;
+}
+
+.price-amount {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.payment-details {
+  margin: 2rem 0;
+}
+
+.payment-details h3 {
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.payment-security {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.security-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.security-badge i {
+  font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+</style>
+{% endblock %}

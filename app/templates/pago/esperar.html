@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="processing-container">
+  <div class="processing-content">
+    <div class="spinner"></div>
+    <h1>Procesando tu pago…</h1>
+    <p class="processing-message">Estamos confirmando tu pago en segundo plano.</p>
+    <p class="processing-note">Por favor, no cierres esta ventana.</p>
+    
+    <div id="status" class="status-card">
+      <div class="status-header">
+        <span class="status-label">Estado:</span>
+        <span id="state" class="status-value">iniciando</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" id="progress"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const jobId = "{{ job_id }}";
+const statusEl = document.getElementById('state');
+const progressEl = document.getElementById('progress');
+const statusBox = document.getElementById('status');
+let progress = 0;
+
+// Función para actualizar la barra de progreso
+function updateProgress() {
+  if (progress < 90) {
+    progress += Math.random() * 10;
+    progressEl.style.width = `${Math.min(progress, 90)}%`;
+  }
+}
+
+// Actualizar progreso cada 800ms
+const progressInterval = setInterval(updateProgress, 800);
+
+// Función para verificar el estado del pago
+async function verificarEstado() {
+  try {
+    const url = `{{ url_for('pago.estado', job_id='__JOB__') }}`.replace('__JOB__', jobId);
+    const res = await fetch(url, {cache: 'no-cache'});
+    
+    if (!res.ok) throw new Error('No se pudo verificar el estado');
+    
+    const data = await res.json();
+    
+    // Actualizar estado
+    let estado = data.estado || 'procesando';
+    let estadoPago = data.estado_pago ? ` (${data.estado_pago})` : '';
+    
+    // Traducir estados
+    const estados = {
+      'ejecutando': 'Procesando pago',
+      'completado': '¡Pago completado!',
+      'error': 'Error en el pago',
+      'procesando': 'Procesando...'
+    };
+    
+    estado = estados[estado] || estado;
+    statusEl.textContent = estado + estadoPago;
+    
+    // Completar la barra de progreso cuando se complete
+    if (data.estado === 'completado' && data.propiedad_id) {
+      progress = 100;
+      progressEl.style.width = '100%';
+      progressEl.classList.add('completed');
+      clearInterval(progressInterval);
+      
+      // Redirigir después de un breve retraso
+      setTimeout(() => {
+        window.location.href = `{{ url_for('propiedades.detalle', propiedad_id=0) }}`.replace('0', data.propiedad_id);
+      }, 1500);
+      return;
+    }
+    
+    // Manejar errores
+    if (data.estado === 'error') {
+      statusBox.classList.add('error');
+      clearInterval(progressInterval);
+      progressEl.classList.add('error');
+      
+      // Mostrar botón de reintentar después de un error
+      setTimeout(() => {
+        const reintentarBtn = document.createElement('button');
+        reintentarBtn.className = 'btn btn-primary';
+        reintentarBtn.textContent = 'Reintentar pago';
+        reintentarBtn.onclick = () => window.location.reload();
+        statusBox.appendChild(document.createElement('br'));
+        statusBox.appendChild(reintentarBtn);
+      }, 1000);
+      
+      return;
+    }
+    
+    // Continuar verificando
+    setTimeout(verificarEstado, 1500);
+    
+  } catch (error) {
+    console.error('Error:', error);
+    statusEl.textContent = 'Error al verificar el estado';
+    statusBox.classList.add('error');
+    clearInterval(progressInterval);
+    
+    // Mostrar mensaje de error con opción de reintentar
+    setTimeout(() => {
+      const errorMsg = document.createElement('p');
+      errorMsg.className = 'error-message';
+      errorMsg.textContent = 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.';
+      
+      const reintentarBtn = document.createElement('button');
+      reintentarBtn.className = 'btn btn-primary';
+      reintentarBtn.textContent = 'Reintentar';
+      reintentarBtn.onclick = () => window.location.reload();
+      
+      statusBox.appendChild(document.createElement('br'));
+      statusBox.appendChild(errorMsg);
+      statusBox.appendChild(reintentarBtn);
+    }, 500);
+  }
+}
+
+// Iniciar la verificación del estado
+setTimeout(verificarEstado, 1000);
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.processing-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.processing-content {
+  max-width: 500px;
+  width: 100%;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 2rem;
+  border: 5px solid var(--soft-blue);
+  border-top: 5px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+h1 {
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.processing-message {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.processing-note {
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.estado-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.estado-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.estado-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.estado-value {
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.progress {
+  height: 100%;
+  width: 0%;
+  background-color: var(--primary);
+  border-radius: 4px;
+  transition: width 0.5s ease-in-out;
+}
+
+.progress.completed {
+  background-color: #28a745;
+}
+
+.progress.error {
+  background-color: #dc3545;
+}
+
+.error-message {
+  color: #dc3545;
+  margin: 1rem 0;
+}
+
+.btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1.5rem;
+}
+
+/* Efecto de parpadeo para el texto de estado */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.estado-value {
+  animation: pulse 1.5s infinite;
+}
+
+/* Estilos para móviles */
+@media (max-width: 576px) {
+  .processing-container {
+    padding: 1rem;
+  }
+  
+  .estado-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .estado-value {
+    text-align: right;
+  }
+}
+</style>
+{% endblock %}
