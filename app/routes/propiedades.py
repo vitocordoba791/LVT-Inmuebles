@@ -120,11 +120,32 @@ def editar(propiedad_id):
 @propiedades_bp.route('/<int:propiedad_id>/eliminar', methods=['POST'])
 @login_required
 def eliminar(propiedad_id):
-    propiedad = Propiedad.query.get_or_404(propiedad_id)
+    from ..models import Pago
+    
+    # Obtener la propiedad con bloqueo para evitar condiciones de carrera
+    propiedad = Propiedad.query.with_for_update().get_or_404(propiedad_id)
     
     if propiedad.propietario_id != current_user.id:
         abort(403)
     
-    db.session.delete(propiedad)
-    db.session.commit()
-    return redirect(url_for('propiedades.listar'))
+    try:
+        # Primero eliminamos los pagos asociados a esta propiedad
+        Pago.query.filter_by(propiedad_id=propiedad.id).delete()
+        
+        # Luego eliminamos la propiedad
+        db.session.delete(propiedad)
+        db.session.commit()
+        
+        # Limpiar la caché del navegador para forzar la actualización
+        response = redirect(url_for('propiedades.listar'))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+        
+    except Exception as e:
+        db.session.rollback()
+        # Si hay un error, redirigir con un mensaje de error
+        from flask import flash
+        flash('No se pudo eliminar la propiedad. Por favor, intente nuevamente.', 'error')
+        return redirect(url_for('propiedades.detalle', propiedad_id=propiedad_id))
