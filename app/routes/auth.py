@@ -14,7 +14,7 @@ def login():
         usuario = Usuario.query.filter_by(email=email).first()
         if usuario and usuario.verificar_password(password):
             login_user(usuario)
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.inicio'))
         flash('Credenciales inválidas')
     return render_template('auth/login.html')
 
@@ -37,7 +37,7 @@ def register():
         db.session.add(usuario)
         db.session.commit()
         login_user(usuario)
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.inicio'))
     return render_template('auth/register.html')
 
 
@@ -45,4 +45,4 @@ def register():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main.inicio'))

@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
@@ -24,13 +25,29 @@ class Propiedad(db.Model):
     descripcion = db.Column(db.Text, nullable=False)
     precio = db.Column(db.Float, nullable=False)
     direccion = db.Column(db.String(255), nullable=False)
+    metros_cuadrados = db.Column(db.Float, nullable=False, default=0)
+    habitaciones = db.Column(db.Integer, nullable=False, default=0)
+    banos = db.Column(db.Integer, nullable=False, default=0)
+    estacionamientos = db.Column(db.Integer, nullable=False, default=0)
+    vendida = db.Column(db.Boolean, default=False, nullable=False)
     propietario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    pagos = db.relationship('Pago', backref='propiedad', lazy=True)
+    pagos = db.relationship('Pago', backref='propiedad', lazy=True, order_by='desc(Pago.fecha_creacion)')
+    
+    def marcar_como_vendida(self):
+        self.vendida = True
+        db.session.commit()
+        return self
 
 
 class Pago(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     monto = db.Column(db.Float, nullable=False)
     estado = db.Column(db.String(50), nullable=False, default='pendiente')
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     propiedad_id = db.Column(db.Integer, db.ForeignKey('propiedad.id'), nullable=False)
+    
+    def marcar_como_pagado(self):
+        self.estado = 'pagado'
+        db.session.commit()
+        return self

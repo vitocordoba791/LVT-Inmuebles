@@ -23,24 +23,66 @@ def detalle(propiedad_id):
 @login_required
 def crear():
     if request.method == 'POST':
+        # Obtener datos básicos
         titulo = request.form.get('titulo', '').strip()
         descripcion = request.form.get('descripcion', '').strip()
         precio = request.form.get('precio', '').strip()
         direccion = request.form.get('direccion', '').strip()
         
-        if not titulo or not descripcion or not precio or not direccion:
-            return render_template('propiedades/crear.html', error='Completa todos los campos')
+        # Obtener características
+        metros_cuadrados = request.form.get('metros_cuadrados', '0').strip()
+        habitaciones = request.form.get('habitaciones', '0').strip()
+        banos = request.form.get('banos', '0').strip()
+        estacionamientos = request.form.get('estacionamientos', '0').strip()
         
+        # Validar campos requeridos
+        campos_requeridos = {
+            'título': titulo,
+            'descripción': descripcion,
+            'precio': precio,
+            'dirección': direccion,
+            'metros cuadrados': metros_cuadrados
+        }
+        
+        for campo, valor in campos_requeridos.items():
+            if not valor:
+                return render_template('propiedades/crear.html', 
+                                    error=f'El campo {campo} es obligatorio')
+        
+        # Validar y convertir valores numéricos
         try:
             precio_valor = float(precio)
-        except ValueError:
-            return render_template('propiedades/crear.html', error='Precio inválido')
+            metros_cuadrados_valor = float(metros_cuadrados)
+            habitaciones_valor = int(habitaciones) if habitaciones else 0
+            banos_valor = int(banos) if banos else 0
+            estacionamientos_valor = int(estacionamientos) if estacionamientos else 0
+            
+            if precio_valor <= 0:
+                return render_template('propiedades/crear.html', 
+                                    error='El precio debe ser mayor a 0')
+                
+            if metros_cuadrados_valor <= 0:
+                return render_template('propiedades/crear.html',
+                                    error='Los metros cuadrados deben ser mayores a 0')
+                
+            if habitaciones_valor < 0 or banos_valor < 0 or estacionamientos_valor < 0:
+                return render_template('propiedades/crear.html',
+                                    error='Los valores numéricos no pueden ser negativos')
+                
+        except ValueError as e:
+            return render_template('propiedades/crear.html', 
+                                error='Por favor ingresa valores numéricos válidos')
         
+        # Crear la propiedad con todos los campos
         propiedad = Propiedad(
-            titulo=titulo, 
-            descripcion=descripcion, 
-            precio=precio_valor, 
-            direccion=direccion, 
+            titulo=titulo,
+            descripcion=descripcion,
+            precio=precio_valor,
+            direccion=direccion,
+            metros_cuadrados=metros_cuadrados_valor,
+            habitaciones=habitaciones_valor,
+            banos=banos_valor,
+            estacionamientos=estacionamientos_valor,
             propietario_id=current_user.id
         )
         

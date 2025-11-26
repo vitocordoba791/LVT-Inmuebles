@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from markupsafe import Markup
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -44,6 +45,13 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(propiedades_bp, url_prefix='/propiedades')
     app.register_blueprint(pago_bp, url_prefix='/pago')
+
+    # Add nl2br filter
+    @app.template_filter('nl2br')
+    def nl2br_filter(value):
+        if not value:
+            return ''
+        return Markup(value.replace('\n', '<br>'))
 
     with app.app_context():
         db.create_all()

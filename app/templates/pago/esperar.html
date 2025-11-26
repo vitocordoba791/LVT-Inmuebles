@@ -25,6 +25,7 @@ const jobId = "{{ job_id }}";
 const statusEl = document.getElementById('state');
 const progressEl = document.getElementById('progress');
 const statusBox = document.getElementById('status');
+const processingMessage = document.querySelector('.processing-message');
 let progress = 0;
 
 // Función para actualizar la barra de progreso
@@ -38,13 +39,41 @@ function updateProgress() {
 // Actualizar progreso cada 800ms
 const progressInterval = setInterval(updateProgress, 800);
 
+// Función para mostrar mensaje de éxito o error
+function showMessage(type, message, redirectUrl = null) {
+  // Detener la barra de progreso
+  clearInterval(progressInterval);
+  
+  // Actualizar la interfaz
+  if (type === 'success') {
+    statusEl.textContent = '¡Pago exitoso!';
+    statusEl.className = 'status-value success';
+    processingMessage.textContent = message || 'Tu pago se ha procesado correctamente.';
+    progressEl.style.width = '100%';
+    progressEl.className = 'progress success';
+  } else {
+    statusEl.textContent = 'Error en el pago';
+    statusEl.className = 'status-value error';
+    processingMessage.textContent = message || 'Hubo un problema al procesar tu pago.';
+    progressEl.style.width = '100%';
+    progressEl.className = 'progress error';
+  }
+  
+  // Redirigir después de un retraso si se proporciona una URL
+  if (redirectUrl) {
+    setTimeout(() => {
+      window.location.href = redirectUrl;
+    }, 3000);
+  }
+}
+
 // Función para verificar el estado del pago
 async function verificarEstado() {
   try {
     const url = `{{ url_for('pago.estado', job_id='__JOB__') }}`.replace('__JOB__', jobId);
     const res = await fetch(url, {cache: 'no-cache'});
     
-    if (!res.ok) throw new Error('No se pudo verificar el estado');
+    if (!res.ok) throw new Error('No se pudo verificar el estado del pago');
     
     const data = await res.json();
     
@@ -61,39 +90,74 @@ async function verificarEstado() {
     };
     
     estado = estados[estado] || estado;
-    statusEl.textContent = estado + estadoPago;
-    
-    // Completar la barra de progreso cuando se complete
-    if (data.estado === 'completado' && data.propiedad_id) {
-      progress = 100;
-      progressEl.style.width = '100%';
-      progressEl.classList.add('completed');
-      clearInterval(progressInterval);
+    if (data.estado === 'completado' || data.estado === 'error') {
+      if (data.estado === 'completado' && data.exito) {
+        // Pago exitoso
+        let redirectUrl = `{{ url_for('propiedades.detalle', propiedad_id=0) }}`;
+        
+        if (data.propiedad_id) {
+          // Si tenemos un ID de propiedad, redirigir a la página de la propiedad
+          redirectUrl = `{{ url_for('propiedades.detalle', propiedad_id=0) }}`.replace('0', data.propiedad_id);
+          showMessage('success', '¡Pago procesado con éxito! Redirigiendo a la propiedad...', redirectUrl);
+        } else if (data.pago_id) {
+          // Si solo tenemos el ID del pago, redirigir a la página de éxito
+          redirectUrl = `{{ url_for('pago.exito', pago_id=0) }}`.replace('0', data.pago_id);
+          showMessage('success', '¡Pago procesado con éxito! Redirigiendo...', redirectUrl);
+        } else {
+          // Si no hay ID de propiedad ni de pago, mostrar mensaje genérico
+          showMessage('success', '¡Pago procesado con éxito!');
+        }
+      } else {
+        // Error en el pago
+        const errorMessage = data.mensaje || 'Hubo un problema al procesar tu pago. Por favor, inténtalo de nuevo.';
+        showMessage('error', errorMessage);
+        
+        // Si el error es porque la propiedad ya fue vendida, redirigir después de 3 segundos
+        if (data.mensaje && data.mensaje.includes('ya ha sido vendida') && data.propiedad_id) {
+          const redirectUrl = `{{ url_for('propiedades.detalle', propiedad_id=0) }}`.replace('0', data.propiedad_id);
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 3000);
+        }
+      }
+    } else {
+      statusEl.textContent = estado + estadoPago;
       
-      // Redirigir después de un breve retraso
-      setTimeout(() => {
-        window.location.href = `{{ url_for('propiedades.detalle', propiedad_id=0) }}`.replace('0', data.propiedad_id);
-      }, 1500);
-      return;
-    }
-    
-    // Manejar errores
-    if (data.estado === 'error') {
-      statusBox.classList.add('error');
-      clearInterval(progressInterval);
-      progressEl.classList.add('error');
+      // Completar la barra de progreso cuando se complete
+      if (data.estado === 'completado' && data.propiedad_id) {
+        progress = 100;
+        progressEl.style.width = '100%';
+        progressEl.classList.add('completed');
+        clearInterval(progressInterval);
+        
+        // Redirigir después de un breve retraso
+        setTimeout(() => {
+          window.location.href = `{{ url_for('propiedades.detalle', propiedad_id=0) }}`.replace('0', data.propiedad_id);
+        }, 1500);
+        return;
+      }
       
-      // Mostrar botón de reintentar después de un error
-      setTimeout(() => {
-        const reintentarBtn = document.createElement('button');
-        reintentarBtn.className = 'btn btn-primary';
-        reintentarBtn.textContent = 'Reintentar pago';
-        reintentarBtn.onclick = () => window.location.reload();
-        statusBox.appendChild(document.createElement('br'));
-        statusBox.appendChild(reintentarBtn);
-      }, 1000);
+      // Manejar errores
+      if (data.estado === 'error') {
+        statusBox.classList.add('error');
+        clearInterval(progressInterval);
+        progressEl.classList.add('error');
+        
+        // Mostrar botón de reintentar después de un error
+        setTimeout(() => {
+          const reintentarBtn = document.createElement('button');
+          reintentarBtn.className = 'btn btn-primary';
+          reintentarBtn.textContent = 'Reintentar pago';
+          reintentarBtn.onclick = () => window.location.reload();
+          statusBox.appendChild(document.createElement('br'));
+          statusBox.appendChild(reintentarBtn);
+        }, 1000);
+        
+        return;
+      }
       
-      return;
+      // Continuar verificando
+      setTimeout(verificarEstado, 1500);
     }
     
     // Continuar verificando

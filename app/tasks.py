@@ -45,13 +45,86 @@ def obtener_estado_trabajo(id_trabajo: str) -> Dict[str, Any]:
 # Tareas específicas del dominio
 
 def _procesar_pago(pago_id: int) -> Dict[str, Any]:
-    sleep(2)
-    pago = Pago.query.get(pago_id)
-    if pago is None:
-        return {"exito": False, "mensaje": "Pago no encontrado"}
-    pago.estado = "pagado"
-    db.session.commit()
-    return {"exito": True, "pago_id": pago.id, "status": pago.estado}
+    from sqlalchemy.orm import sessionmaker
+    from . import create_app
+    
+    # Configuración inicial
+    app = create_app()
+    Session = sessionmaker(bind=db.engine)
+    session = Session()
+    
+    try:
+        # Pequeña pausa para simular procesamiento
+        sleep(2)
+        
+        # Obtener el pago con bloqueo para evitar actualizaciones simultáneas
+        pago = session.query(Pago).with_for_update(skip_locked=True).get(pago_id)
+        if not pago:
+            app.logger.error(f"Pago no encontrado: {pago_id}")
+            return {
+                "exito": False, 
+                "mensaje": "Pago no encontrado",
+                "pago_id": pago_id,
+                "propiedad_vendida": False
+            }
+            
+        # Verificar si la propiedad ya está vendida
+        if pago.propiedad is None:
+            app.logger.error(f"Propiedad no encontrada para el pago: {pago_id}")
+            return {
+                "exito": False,
+                "mensaje": "La propiedad asociada al pago no existe",
+                "pago_id": pago.id,
+                "propiedad_vendida": False
+            }
+            
+        if pago.propiedad.vendida:
+            app.logger.warning(f"Intento de pago para propiedad ya vendida: {pago.propiedad.id}")
+            return {
+                "exito": False, 
+                "mensaje": "La propiedad ya ha sido vendida",
+                "pago_id": pago.id,
+                "propiedad_id": pago.propiedad.id,
+                "propiedad_vendida": True
+            }
+            
+        # Marcar pago como pagado
+        pago.estado = "pagado"
+        
+        # Marcar propiedad como vendida
+        pago.propiedad.vendida = True
+        
+        # Confirmar los cambios
+        session.commit()
+        
+        app.logger.info(f"Pago {pago.id} procesado exitosamente para la propiedad {pago.propiedad.id}")
+        
+        return {
+            "exito": True,
+            "mensaje": "Pago procesado exitosamente",
+            "pago_id": pago.id,
+            "propiedad_id": pago.propiedad.id,
+            "status": "pagado",
+            "propiedad_vendida": True
+        }
+        
+    except Exception as e:
+        session.rollback()
+        error_msg = f"Error procesando pago {pago_id}: {str(e)}"
+        app.logger.error(error_msg, exc_info=True)
+        
+        return {
+            "exito": False,
+            "mensaje": f"Error al procesar el pago: {str(e)}",
+            "pago_id": pago_id,
+            "propiedad_vendida": False
+        }
+        
+    finally:
+        try:
+            session.close()
+        except Exception as e:
+            app.logger.error(f"Error cerrando la sesión: {str(e)}")
 
 
 def enviar_procesar_pago(app, pago_id: int) -> str:

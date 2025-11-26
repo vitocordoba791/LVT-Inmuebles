@@ -2,51 +2,120 @@
 
 {% block content %}
 <article class="property-detail">
-  <h1>{{ propiedad.titulo }}</h1>
-  
-  <div class="property-info">
-    <p class="property-price">$ {{ '%.2f'|format(propiedad.precio) }}</p>
-    <p class="property-address">
-      <i class="icon-location"></i> {{ propiedad.direccion }}
-    </p>
-    
-    <div class="property-description">
-      <h3>Descripción</h3>
-      <p>{{ propiedad.descripcion|nl2br }}</p>
-    </div>
-    
-    <div class="property-actions">
-      {% if current_user.is_authenticated %}
-        {% if current_user.id != propiedad.propietario_id %}
-          <a href="{{ url_for('pago.pagar', propiedad_id=propiedad.id) }}" 
-             class="btn btn-accent">
-            Comprar propiedad
-          </a>
-        {% else %}
-          <div class="owner-actions">
-            <a href="{{ url_for('propiedades.editar', propiedad_id=propiedad.id) }}" 
-               class="btn btn-outline">
-              Editar propiedad
-            </a>
-            <form action="{{ url_for('propiedades.eliminar', propiedad_id=propiedad.id) }}" 
-                  method="post" 
-                  class="delete-form"
-                  onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta propiedad? Esta acción no se puede deshacer.');">
-              <button type="submit" class="btn btn-danger">Eliminar propiedad</button>
-            </form>
-          </div>
-        {% endif %}
+  <div class="property-header">
+    <div class="property-header-top">
+      <h1 class="property-title">{{ propiedad.titulo }}</h1>
+      {% if propiedad.vendida %}
+        <span class="property-status sold">Vendida</span>
       {% else %}
-        <p class="login-prompt">
-          <a href="{{ url_for('auth.login') }}">Inicia sesión</a> para comprar esta propiedad.
-        </p>
+        <span class="property-status available">Disponible</span>
       {% endif %}
     </div>
+    <p class="property-price">$ {{ "{:,.2f}".format(propiedad.precio) }}</p>
+    <p class="property-address">
+      <i class="fas fa-map-marker-alt"></i> {{ propiedad.direccion }}
+    </p>
   </div>
-  
-  <div class="property-owner">
-    <h3>Publicado por</h3>
-    <p>{{ propiedad.propietario.nombre_usuario }}</p>
+
+  <div class="property-content">
+    <div class="property-main">
+      <div class="property-gallery">
+        <!-- Imagen principal -->
+        <div class="gallery-main" style="grid-column: span 3;">
+          <img src="{{ url_for('static', filename='img/placeholder-property.jpg') }}" alt="{{ propiedad.titulo }}" class="main-image">
+        </div>
+        <!-- Miniaturas (puedes agregar más imágenes aquí) -->
+        <img src="{{ url_for('static', filename='img/placeholder-property.jpg') }}" alt="Vista 1" class="thumbnail">
+        <img src="{{ url_for('static', filename='img/placeholder-property.jpg') }}" alt="Vista 2" class="thumbnail">
+        <img src="{{ url_for('static', filename='img/placeholder-property.jpg') }}" alt="Vista 3" class="thumbnail">
+      </div>
+
+      <div class="property-description">
+        <h3>Descripción</h3>
+        <p>{{ propiedad.descripcion|nl2br }}</p>
+      </div>
+
+      <div class="property-features">
+        <div class="feature-item">
+          <i class="fas fa-ruler-combined"></i>
+          <span>{{ "{0:,.0f}".format(propiedad.metros_cuadrados|float) }} m²</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-bed"></i>
+          <span>{{ propiedad.habitaciones }} {{ 'Habitación' if propiedad.habitaciones == 1 else 'Habitaciones' }}</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-bath"></i>
+          <span>{{ propiedad.banos }} {{ 'Baño' if propiedad.banos == 1 else 'Baños' }}</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-car"></i>
+          <span>{{ propiedad.estacionamientos }} {{ 'Estacionamiento' if propiedad.estacionamientos == 1 else 'Estacionamientos' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="property-sidebar">
+      <div class="property-actions">
+        {% if current_user.is_authenticated %}
+          {% if current_user.id != propiedad.propietario_id %}
+            {% if not propiedad.vendida %}
+              <a href="{{ url_for('pago.pagar', propiedad_id=propiedad.id) }}" 
+                 class="btn btn-accent">
+                <i class="fas fa-hand-holding-usd"></i> Comprar propiedad
+              </a>
+              <button class="btn btn-outline">
+                <i class="far fa-envelope"></i> Contactar vendedor
+              </button>
+            {% else %}
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Esta propiedad ya ha sido vendida.
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="action-button-wrapper" style="width: 100%;">
+              <a href="{{ url_for('propiedades.editar', propiedad_id=propiedad.id) }}" 
+                 class="btn btn-danger" 
+                 style="display: block; width: 100%; box-sizing: border-box; text-align: center;">
+                <i class="fas fa-edit"></i> Editar propiedad
+              </a>
+            </div>
+            <div class="action-button-wrapper" style="width: 100%;">
+              <form action="{{ url_for('propiedades.eliminar', propiedad_id=propiedad.id) }}" 
+                    method="post" 
+                    class="delete-form"
+                    style="display: block; width: 100%; margin: 0; padding: 0;"
+                    onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta propiedad? Esta acción no se puede deshacer.');">
+                <button type="submit" class="btn btn-danger" style="width: 100%; box-sizing: border-box;">
+                  <i class="fas fa-trash"></i> Eliminar propiedad
+                </button>
+              </form>
+            </div>
+          {% endif %}
+        {% else %}
+          <p class="login-prompt">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+              <i class="fas fa-sign-in-alt"></i> Inicia sesión para comprar
+            </a>
+          </p>
+        {% endif %}
+      </div>
+
+      <div class="property-owner">
+        <h3>Publicado por</h3>
+        <div class="owner-info">
+          <div class="owner-avatar">
+            {{ propiedad.propietario.nombre_usuario[0]|upper }}
+          </div>
+          <div class="owner-details">
+            <h4 class="owner-name">{{ propiedad.propietario.nombre_usuario }}</h4>
+            <p class="owner-contact">
+              <i class="far fa-envelope"></i> {{ propiedad.propietario.email }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
   </div>
 </article>
 {% endblock %}
@@ -57,6 +126,32 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem;
+}
+
+.property-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.property-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.property-status.available {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.property-status.sold {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 .property-price {
@@ -83,6 +178,61 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Contenedor de acciones */
+.property-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+/* Contenedor para cada botón de acción */
+.action-button-wrapper {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Estilos para los botones de acción */
+.action-button-wrapper > a,
+.action-button-wrapper > form {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Estilos específicos para los botones */
+.action-button-wrapper .btn,
+.action-button-wrapper a.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* Asegurar que el botón dentro del formulario herede el ancho */
+.action-button-wrapper form .btn {
+  width: 100%;
+  margin: 0;
+}
+
+.property-actions .btn i {
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .owner-actions {
@@ -93,6 +243,58 @@
 
 .delete-form {
   margin: 0;
+  width: 100%;
+  display: block;
+}
+
+.delete-form .btn {
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Reset de estilos para los botones */
+.action-button-wrapper {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.action-button-wrapper > a,
+.action-button-wrapper > form {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.action-button-wrapper .btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0.75rem 1rem !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  border-radius: 0.375rem !important;
+  transition: all 0.2s !important;
+  text-decoration: none !important;
+}
+
+/* Asegurar que el botón dentro del formulario herede el ancho */
+.delete-form {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.delete-form .btn {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0.75rem 1rem !important;
+  box-sizing: border-box !important;
 }
 
 .login-prompt {

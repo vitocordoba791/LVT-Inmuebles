@@ -7,49 +7,53 @@
     <p>Buscá por título, dirección o descripción.</p>
     <form class="search-bar" method="get" action="{{ url_for('main.inicio') }}">
       <input type="text" name="q" placeholder="Ej: 3 ambientes en centro" value="{{ busqueda or '' }}">
-      <button class="btn btn-primary" type="submit">Buscar</button>
+      <button type="submit" class="btn btn-accent">
+        <i class="fas fa-search"></i> Buscar
+      </button>
       {% if busqueda %}
-        <a class="btn btn-outline" href="{{ url_for('main.inicio') }}">Limpiar</a>
+        <a class="btn btn-outline" href="{{ url_for('main.inicio') }}">
+          <i class="fas fa-times"></i> Limpiar
+        </a>
       {% endif %}
     </form>
     
     {% if estadisticas %}
     <div class="metrics">
-      <div class="metric">
-        <span class="label">Propiedades</span>
-        <span class="value">{{ estadisticas.propiedades }}</span>
+      <div class="metrics-row">
+        <div class="metric">
+          <span class="label">Propiedades</span>
+          <span class="value">{{ estadisticas.propiedades }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">Disponibles</span>
+          <span class="value">{{ estadisticas.propiedades - estadisticas.propiedades_vendidas }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">Vendidas</span>
+          <span class="value">{{ estadisticas.propiedades_vendidas }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">Propietarios</span>
+          <span class="value">{{ estadisticas.total_propietarios }}</span>
+        </div>
       </div>
-      <div class="metric">
-        <span class="label">Disponibles</span>
-        <span class="value">{{ estadisticas.propiedades - estadisticas.propiedades_vendidas }}</span>
-      </div>
-      <div class="metric">
-        <span class="label">Vendidas</span>
-        <span class="value">{{ estadisticas.propiedades_vendidas }}</span>
-      </div>
-      <div class="metric">
-        <span class="label">Precio prom.</span>
-        <span class="value">$ {{ '%.0f'|format(estadisticas.precio_promedio) }}</span>
-      </div>
-      <div class="metric">
-        <span class="label">Mín.</span>
-        <span class="value">$ {{ '%.0f'|format(estadisticas.precio_minimo) }}</span>
-      </div>
-      <div class="metric">
-        <span class="label">Máx.</span>
-        <span class="value">$ {{ '%.0f'|format(estadisticas.precio_maximo) }}</span>
-      </div>
-      <div class="metric">
-        <span class="label">Pagos</span>
-        <span class="value">{{ estadisticas.pagos_realizados }}</span>
-      </div>
-      <div class="metric">
-        <span class="label">Ticket prom.</span>
-        <span class="value">$ {{ '%.0f'|format(estadisticas.ticket_promedio) }}</span>
-      </div>
-      <div class="metric">
-        <span class="label">Propietarios</span>
-        <span class="value">{{ estadisticas.total_propietarios }}</span>
+      <div class="metrics-row">
+        <div class="metric">
+          <span class="label">Precio prom.</span>
+          <span class="value">$ {{ '%.0f'|format(estadisticas.precio_promedio) }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">Mín.</span>
+          <span class="value">$ {{ '%.0f'|format(estadisticas.precio_minimo) }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">Máx.</span>
+          <span class="value">$ {{ '%.0f'|format(estadisticas.precio_maximo) }}</span>
+        </div>
+        <div class="metric">
+          <span class="label">Pagos</span>
+          <span class="value">{{ estadisticas.pagos_realizados }}</span>
+        </div>
       </div>
     </div>
     {% endif %}
