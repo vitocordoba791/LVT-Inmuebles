@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, abort
+from flask import Blueprint, render_template, request, redirect, url_for, abort, flash
 from flask_login import login_required, current_user
+from sqlalchemy import or_
 from ..models import db, Propiedad
+from ..auth_utils import login_required, admin_required, propietario_o_admin_required
 
 
 propiedades_bp = Blueprint('propiedades', __name__)
@@ -8,15 +10,67 @@ propiedades_bp = Blueprint('propiedades', __name__)
 
 @propiedades_bp.route('/')
 def listar():
-    propiedades = Propiedad.query.all()
-    return render_template('propiedades/lista.html', propiedades=propiedades)
+    # Configuración de paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Número de propiedades por página
+    
+    # Obtener parámetros de búsqueda y filtros
+    busqueda = request.args.get('q', '')
+    tipo = request.args.get('tipo', 'todos')
+    orden = request.args.get('orden', 'recientes')
+    mis_propiedades = request.args.get('mis_propiedades', '')
+    
+    # Construir la consulta base
+    query = Propiedad.query
+    
+    # Aplicar filtros
+    if busqueda:
+        query = query.filter(
+            or_(
+                Propiedad.titulo.ilike(f'%{busqueda}%'),
+                Propiedad.descripcion.ilike(f'%{busqueda}%'),
+                Propiedad.direccion.ilike(f'%{busqueda}%')
+            )
+        )
+    
+    # Filtro por tipo deshabilitado temporalmente hasta que se agregue el campo al modelo
+    # if tipo != 'todos':
+    #     query = query.filter_by(tipo=tipo)
+        
+    if mis_propiedades and current_user.is_authenticated:
+        query = query.filter_by(propietario_id=current_user.id)
+    
+    # Ordenar
+    if orden == 'precio_asc':
+        query = query.order_by(Propiedad.precio.asc())
+    elif orden == 'precio_desc':
+        query = query.order_by(Propiedad.precio.desc())
+    else:  # recientes
+        query = query.order_by(Propiedad.fecha_creacion.desc())
+    
+    # Paginar los resultados
+    propiedades_paginadas = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return render_template(
+        'propiedades/lista.html',
+        propiedades=propiedades_paginadas,
+        busqueda=busqueda,
+        tipo_actual=tipo,
+        orden_actual=orden,
+        mis_propiedades_actual=mis_propiedades,
+        es_admin=getattr(current_user, 'es_admin', False)
+    )
 
 
 @propiedades_bp.route('/<int:propiedad_id>')
-@login_required
 def detalle(propiedad_id):
+    # Cualquiera puede ver el detalle, pero mostramos acciones adicionales a propietarios/admins
     propiedad = Propiedad.query.get_or_404(propiedad_id)
-    return render_template('propiedades/detalle.html', propiedad=propiedad)
+    es_propietario = current_user.is_authenticated and propiedad.propietario_id == current_user.id
+    return render_template('propiedades/detalle.html', 
+                         propiedad=propiedad,
+                         es_propietario=es_propietario,
+                         es_admin=getattr(current_user, 'es_admin', False))
 
 
 @propiedades_bp.route('/crear', methods=['GET', 'POST'])
@@ -93,23 +147,24 @@ def crear():
     return render_template('propiedades/crear.html')
 
 
-@propiedades_bp.route('/<int:propiedad_id>/editar', methods=['GET', 'POST'])
+@propiedades_bp.route('/editar/<int:propiedad_id>', methods=['GET', 'POST'])
 @login_required
+@propietario_o_admin_required
 def editar(propiedad_id):
     propiedad = Propiedad.query.get_or_404(propiedad_id)
     
-    if propiedad.propietario_id != current_user.id:
-        abort(403)
-    
     if request.method == 'POST':
+        # Actualizar solo los campos permitidos
         propiedad.titulo = request.form.get('titulo', propiedad.titulo).strip()
         propiedad.descripcion = request.form.get('descripcion', propiedad.descripcion).strip()
-        propiedad.direccion = request.form.get('direccion', propiedad.direccion).strip()
         
-        try:
-            propiedad.precio = float(request.form.get('precio', propiedad.precio))
-        except ValueError:
-            return render_template('propiedades/editar.html', propiedad=propiedad, error='Precio inválido')
+        # Solo el administrador puede cambiar el precio
+        if current_user.es_admin:
+            try:
+                propiedad.precio = float(request.form.get('precio', propiedad.precio))
+            except (ValueError, TypeError):
+                flash('Precio no válido', 'error')
+                return redirect(url_for('propiedades.editar', propiedad_id=propiedad.id))
         
         db.session.commit()
         return redirect(url_for('propiedades.detalle', propiedad_id=propiedad.id))

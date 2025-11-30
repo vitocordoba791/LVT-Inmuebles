@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Administración de Usuarios{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Administración de Usuarios</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre de Usuario</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td>{{ usuario.id }}</td>
+                    <td>{{ usuario.nombre_usuario }}</td>
+                    <td>{{ usuario.email }}</td>
+                    <td>
+                        {% if usuario.es_admin %}
+                            <span class="badge bg-danger">Administrador</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Usuario</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if usuario.activo %}
+                            <span class="badge bg-success">Activo</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                        {% if current_user.id != usuario.id %}
+                        <form action="{{ url_for('auth.toggle_admin', usuario_id=usuario.id) }}" method="POST" class="me-2">
+                            {% if usuario.es_admin %}
+                                <button type="submit" class="btn btn-warning btn-sm" 
+                                        onclick="return confirm('¿Quitar privilegios de administrador a este usuario?')">
+                                    Quitar Admin
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-success btn-sm"
+                                        onclick="return confirm('¿Hacer administrador a este usuario?')">
+                                    Hacer Admin
+                                </button>
+                            {% endif %}
+                        </form>
+                        
+                        <form action="{{ url_for('auth.toggle_estado', usuario_id=usuario.id) }}" method="POST">
+                            {% if usuario.activo %}
+                                <button type="submit" class="btn btn-danger btn-sm" 
+                                        onclick="return confirm('¿Desactivar este usuario? Se cerrará su sesión inmediatamente.')">
+                                    Desactivar
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-info btn-sm"
+                                        onclick="return confirm('¿Activar este usuario?')">
+                                    Activar
+                                </button>
+                            {% endif %}
+                        </form>
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('main.inicio') }}" class="btn btn-primary">
+            Volver al Inicio
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -5,19 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LVT Inmuebles</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-  <nav class="nav">
-    <a class="brand" href="{{ url_for('main.inicio') }}">LVT Inmuebles</a>
-    <div class="spacer"></div>
-    {% if current_user.is_authenticated %}
-      <a href="{{ url_for('propiedades.crear') }}">Publicar</a>
-      <a href="{{ url_for('auth.logout') }}">Salir</a>
-    {% else %}
-      <a href="{{ url_for('auth.login') }}">Ingresar</a>
-      <a href="{{ url_for('auth.register') }}">Registrarse</a>
-    {% endif %}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('main.inicio') }}">LVT Inmuebles</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('propiedades.listar') }}">Propiedades</a>
+          </li>
+          {% if current_user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('propiedades.crear') }}">Publicar Propiedad</a>
+            </li>
+            {% if current_user.es_admin %}
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                  Administración
+                </a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="{{ url_for('auth.admin_usuarios') }}">Usuarios</a></li>
+                </ul>
+              </li>
+            {% endif %}
+          {% endif %}
+        </ul>
+        <ul class="navbar-nav">
+          {% if current_user.is_authenticated %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                {{ current_user.nombre_usuario }}
+                {% if current_user.es_admin %}<span class="badge bg-danger ms-1">Admin</span>{% endif %}
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('propiedades.listar') }}?mis_propiedades=1">Mis Propiedades</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></li>
+              </ul>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('auth.login') }}">Iniciar Sesión</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('auth.register') }}">Registrarse</a>
+            </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
   </nav>
   <main class="container">
     {% with messages = get_flashed_messages() %}
@@ -31,6 +75,126 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+  <!-- Bootstrap JS Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Socket.IO -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+  <script>
+    // Conectar a Socket.IO
+    const socket = io();
+    
+    // Mostrar notificación cuando se desactiva la cuenta
+    socket.on('cuenta_desactivada', function(data) {
+      // Mostrar un modal de Bootstrap con el mensaje
+      const modalHTML = `
+        <div class="modal fade" id="cuentaDesactivadaModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Cuenta Desactivada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body">
+                <p>${data.mensaje}</p>
+                <p>Serás redirigido a la página de inicio de sesión.</p>
+              </div>
+              <div class="modal-footer">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-primary">Aceptar</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Agregar el modal al final del body
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+      
+      // Mostrar el modal
+      const modal = new bootstrap.Modal(document.getElementById('cuentaDesactivadaModal'));
+      modal.show();
+      
+      // Redirigir después de 5 segundos si el usuario no hace clic en Aceptar
+      setTimeout(() => {
+        window.location.href = "{{ url_for('auth.logout') }}";
+      }, 5000);
+    });
+    
+    // Mostrar notificación cuando se asigna rol de administrador
+    socket.on('rol_admin_asignado', function(data) {
+      // Actualizar la sesión del usuario recargando la página
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+      // Mostrar un toast de Bootstrap
+      const toastHTML = `
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+          <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-success text-white">
+              <i class="fas fa-shield-alt me-2"></i>
+              <strong class="me-auto">¡Nuevo Rol!</strong>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+              ${data.mensaje}
+              <div class="mt-2">
+                <small>La página se recargará para actualizar tus permisos...</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Agregar el toast al final del body
+      document.body.insertAdjacentHTML('beforeend', toastHTML);
+      
+      // Auto-eliminar después de 5 segundos
+      setTimeout(() => {
+        const toast = document.querySelector('.toast-container');
+        if (toast) {
+          toast.remove();
+        }
+      }, 5000);
+    });
+    
+    // Mostrar notificación cuando se revoca rol de administrador
+    socket.on('rol_admin_revocado', function(data) {
+      // Actualizar la sesión del usuario recargando la página
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+      // Mostrar un toast de Bootstrap
+      const toastHTML = `
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+          <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-warning text-dark">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong class="me-auto">Cambio de Rol</strong>
+              <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+              ${data.mensaje}
+              <div class="mt-2">
+                <small>La página se recargará para actualizar tus permisos...</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Agregar el toast al final del body
+      document.body.insertAdjacentHTML('beforeend', toastHTML);
+      
+      // Auto-eliminar después de 5 segundos
+      setTimeout(() => {
+        const toast = document.querySelector('.toast-container');
+        if (toast) {
+          toast.remove();
+        }
+      }, 5000);
+    });
+  </script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

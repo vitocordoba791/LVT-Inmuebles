@@ -1,63 +1,105 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="hero">
-  <div class="hero-content">
-    <h1>Encontrá tu próximo hogar</h1>
-    <p>Buscá por título, dirección o descripción.</p>
-    <form class="search-bar" method="get" action="{{ url_for('main.inicio') }}">
-      <input type="text" name="q" placeholder="Ej: 3 ambientes en centro" value="{{ busqueda or '' }}">
-      <button type="submit" class="btn btn-accent">
-        <i class="fas fa-search"></i> Buscar
-      </button>
-      {% if busqueda %}
-        <a class="btn btn-outline" href="{{ url_for('main.inicio') }}">
-          <i class="fas fa-times"></i> Limpiar
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{% if request.args.get('mis_propiedades') %}Mis Propiedades{% else %}Propiedades Disponibles{% endif %}</h1>
+    {% if current_user.is_authenticated %}
+      <div class="btn-group">
+        {% if request.args.get('mis_propiedades') %}
+          <a href="{{ url_for('propiedades.listar') }}" class="btn btn-outline-primary">
+            <i class="bi bi-house-door"></i> Ver Todas
+          </a>
+        {% else %}
+          <a href="{{ url_for('propiedades.listar') }}?mis_propiedades=1" class="btn btn-primary">
+            <i class="bi bi-person-lines-fill"></i> Mis Propiedades
+          </a>
+        {% endif %}
+        <a href="{{ url_for('propiedades.crear') }}" class="btn btn-success">
+          <i class="bi bi-plus-circle"></i> Publicar Propiedad
         </a>
-      {% endif %}
-    </form>
-    
-    {% if estadisticas %}
-    <div class="metrics">
-      <div class="metrics-row">
-        <div class="metric">
-          <span class="label">Propiedades</span>
-          <span class="value">{{ estadisticas.propiedades }}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Disponibles</span>
-          <span class="value">{{ estadisticas.propiedades - estadisticas.propiedades_vendidas }}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Vendidas</span>
-          <span class="value">{{ estadisticas.propiedades_vendidas }}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Propietarios</span>
-          <span class="value">{{ estadisticas.total_propietarios }}</span>
-        </div>
       </div>
-      <div class="metrics-row">
-        <div class="metric">
-          <span class="label">Precio prom.</span>
-          <span class="value">$ {{ '%.0f'|format(estadisticas.precio_promedio) }}</span>
+    {% endif %}
+  </div>
+  
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3">
+        <input type="hidden" name="mis_propiedades" value="{{ request.args.get('mis_propiedades', '') }}">
+        <div class="col-md-6">
+          <div class="input-group">
+            <input type="text" name="q" class="form-control" 
+                   placeholder="Buscar por título, dirección o descripción" 
+                   value="{{ request.args.get('q', '') }}">
+            <button class="btn btn-outline-secondary" type="submit">
+              <i class="bi bi-search"></i> Buscar
+            </button>
+            {% if request.args.get('q') %}
+              <a href="{{ url_for('propiedades.listar', tipo=request.args.get('tipo'), orden=request.args.get('orden'), mis_propiedades=request.args.get('mis_propiedades')) }}" class="btn btn-outline-danger">
+                <i class="bi bi-x"></i>
+              </a>
+            {% endif %}
+          </div>
         </div>
-        <div class="metric">
-          <span class="label">Mín.</span>
-          <span class="value">$ {{ '%.0f'|format(estadisticas.precio_minimo) }}</span>
+        <!-- Filtro por tipo deshabilitado temporalmente -->
+        <div class="col-md-3">
+          <select name="tipo" class="form-select" disabled>
+            <option value="todos">Tipo de propiedad (próximamente)</option>
+          </select>
         </div>
-        <div class="metric">
-          <span class="label">Máx.</span>
-          <span class="value">$ {{ '%.0f'|format(estadisticas.precio_maximo) }}</span>
+        <div class="col-md-3">
+          <select name="orden" class="form-select" onchange="this.form.submit()">
+            <option value="recientes" {% if orden_actual == 'recientes' %}selected{% endif %}>
+              Más recientes primero
+            </option>
+            <option value="precio_asc" {% if orden_actual == 'precio_asc' %}selected{% endif %}>
+              Precio: Menor a mayor
+            </option>
+            <option value="precio_desc" {% if request.args.get('orden') == 'precio_desc' %}selected{% endif %}>
+              Precio: Mayor a menor
+            </option>
+          </select>
         </div>
-        <div class="metric">
-          <span class="label">Pagos</span>
-          <span class="value">{{ estadisticas.pagos_realizados }}</span>
+      </form>
+    </div>
+  </div>
+    
+  {% if estadisticas and not request.args.get('mis_propiedades') %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-3 col-6 mb-3">
+              <div class="metric-card">
+                <div class="metric-value">{{ estadisticas.propiedades }}</div>
+                <div class="metric-label">Propiedades</div>
+              </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+              <div class="metric-card">
+                <div class="metric-value text-success">{{ estadisticas.propiedades - estadisticas.propiedades_vendidas }}</div>
+                <div class="metric-label">Disponibles</div>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="metric-card">
+                <div class="metric-value">$ {{ "%.0f"|format(estadisticas.precio_promedio) }}</div>
+                <div class="metric-label">Precio Promedio</div>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="metric-card">
+                <div class="metric-value">{{ estadisticas.total_propietarios }}</div>
+                <div class="metric-label">Propietarios</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    {% endif %}
   </div>
+  {% endif %}
 </section>
 
 {% if current_user.is_authenticated %}
@@ -65,23 +107,118 @@
 {% endif %}
 
 {% if busqueda %}
-  <p>Resultados para "<strong>{{ busqueda }}</strong>": <span class="badge">{{ propiedades|length }}</span></p>
+  <p>Resultados para "<strong>{{ busqueda }}</strong>": <span class="badge bg-primary">{{ propiedades.total }}</span></p>
 {% endif %}
 
-<ul class="property-grid">
-  {% for propiedad in propiedades %}
-    <li class="property-card">
-      <div class="property-card-body">
-        <h3>{{ propiedad.titulo }}</h3>
-        <p class="muted">{{ propiedad.direccion }}</p>
-        <p class="price">$ {{ '%.2f'|format(propiedad.precio) }}</p>
-        <a class="btn btn-primary" href="{{ url_for('propiedades.detalle', propiedad_id=propiedad.id) }}">
-          Ver detalle
-        </a>
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+  {% for propiedad in propiedades.items %}
+    <div class="col">
+      <div class="card h-100">
+        {% if propiedad.imagenes %}
+          <img src="{{ url_for('static', filename='uploads/' + propiedad.imagenes[0].nombre_archivo) }}" 
+               class="card-img-top" alt="{{ propiedad.titulo }}" style="height: 200px; object-fit: cover;">
+        {% else %}
+          <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+          </div>
+        {% endif %}
+        <div class="card-body">
+          <h5 class="card-title">{{ propiedad.titulo }}</h5>
+          <p class="text-muted">
+            <i class="bi bi-geo-alt"></i> {{ propiedad.direccion }}
+          </p>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="h5 text-primary">$ {{ "{:,.0f}".format(propiedad.precio) }}</span>
+            {% if propiedad.vendida %}
+              <span class="badge bg-danger">Vendida</span>
+            {% else %}
+              <span class="badge bg-success">Disponible</span>
+            {% endif %}
+          </div>
+          <div class="d-flex justify-content-between text-muted small mb-3">
+            <span><i class="bi bi-rulers"></i> {{ propiedad.metros_cuadrados }} m²</span>
+            <span><i class="bi bi-door-open"></i> {{ propiedad.habitaciones }} hab.</span>
+            <span><i class="bi bi-droplet"></i> {{ propiedad.banos }} baño{% if propiedad.banos != 1 %}s{% endif %}</span>
+          </div>
+          <a href="{{ url_for('propiedades.detalle', propiedad_id=propiedad.id) }}" 
+             class="btn btn-outline-primary w-100">
+            Ver Detalles
+          </a>
+          
+          {% if current_user.is_authenticated and (propiedad.propietario_id == current_user.id or current_user.es_admin) %}
+          <div class="mt-2 d-flex gap-2">
+            <a href="{{ url_for('propiedades.editar', propiedad_id=propiedad.id) }}" 
+               class="btn btn-sm btn-outline-secondary flex-grow-1">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="POST" 
+                  action="{{ url_for('propiedades.eliminar', propiedad_id=propiedad.id) }}"
+                  onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta propiedad?')"
+                  class="flex-grow-1">
+              <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
       </div>
-    </li>
+    </div>
   {% else %}
-    <li>No hay propiedades disponibles.</li>
+    <div class="col-12">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No se encontraron propiedades que coincidan con tu búsqueda.
+      </div>
+    </div>
   {% endfor %}
-</ul>
+</div>
+
+<!-- Paginación -->
+{% if propiedades.pages > 1 %}
+<nav aria-label="Paginación de propiedades" class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if propiedades.has_prev %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('propiedades.listar', page=propiedades.prev_num, q=request.args.get('q'), tipo=request.args.get('tipo'), orden=request.args.get('orden'), mis_propiedades=request.args.get('mis_propiedades')) }}">
+          Anterior
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link">Anterior</span>
+      </li>
+    {% endif %}
+    
+    {% for page_num in propiedades.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=3) %}
+      {% if page_num %}
+        {% if page_num != propiedades.page %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('propiedades.listar', page=page_num, q=request.args.get('q'), tipo=request.args.get('tipo'), orden=request.args.get('orden'), mis_propiedades=request.args.get('mis_propiedades')) }}">
+              {{ page_num }}
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item active" aria-current="page">
+            <span class="page-link">{{ page_num }}</span>
+          </li>
+        {% endif %}
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+      {% endif %}
+    {% endfor %}
+    
+    {% if propiedades.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('propiedades.listar', page=propiedades.next_num, q=request.args.get('q'), tipo=request.args.get('tipo'), orden=request.args.get('orden'), mis_propiedades=request.args.get('mis_propiedades')) }}">
+          Siguiente
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link">Siguiente</span>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
 {% endblock %}

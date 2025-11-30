@@ -6,45 +6,63 @@ from typing import Any, Dict, Optional
 from . import db
 from .models import Pago, Usuario, Propiedad
 
-
-_trabajos: Dict[str, Dict[str, Any]] = {}
-_bloqueo = Lock()
+# Variables globales para gestionar trabajos en memoria
+_trabajos: Dict[str, Dict[str, Any]] = {}  # Almacena estado de los trabajos
+_bloqueo = Lock()                            # Mutex para acceso seguro a _trabajos
 
 
 def _ejecutar_en_app(app, fn, *args, **kwargs):
+    # Ejecuta una función dentro del contexto de la aplicación Flask
     with app.app_context():
         return fn(*args, **kwargs)
 
 
 def enviar_trabajo(app, fn, *args, meta: Optional[Dict[str, Any]] = None, **kwargs) -> str:
-    id_trabajo = str(uuid4())
+    # Envía una tarea para ejecución asíncrona en un hilo separado
+    id_trabajo = str(uuid4())  # Generar ID único para el trabajo
+    
+    # Registrar trabajo con estado inicial
     with _bloqueo:
-        _trabajos[id_trabajo] = {"estado": "ejecutando", "resultado": None, "error": None, "meta": meta or {}}
+        _trabajos[id_trabajo] = {
+            "estado": "ejecutando", 
+            "resultado": None, 
+            "error": None, 
+            "meta": meta or {}
+        }
 
     def objetivo():
+        # Función que se ejecutará en el hilo separado
         try:
+            # Ejecutar la función con el contexto de la aplicación
             resultado = _ejecutar_en_app(app, fn, *args, **kwargs)
+            
+            # Actualizar estado con resultado exitoso
             with _bloqueo:
                 _trabajos[id_trabajo]["estado"] = "completado"
                 _trabajos[id_trabajo]["resultado"] = resultado
+                
         except Exception as e:  # noqa: BLE001
+            # Actualizar estado con error
             with _bloqueo:
                 _trabajos[id_trabajo]["estado"] = "error"
                 _trabajos[id_trabajo]["error"] = str(e)
 
+    # Crear e iniciar hilo daemon para ejecutar la tarea
     hilo = Thread(target=objetivo, daemon=True)
     hilo.start()
     return id_trabajo
 
 
 def obtener_estado_trabajo(id_trabajo: str) -> Dict[str, Any]:
+    # Obtiene el estado actual de un trabajo
     with _bloqueo:
         return _trabajos.get(id_trabajo, {"estado": "no_encontrado"}).copy()
 
 
-# Tareas específicas del dominio
+# ===== TAREAS ESPECÍFICAS DEL DOMINIO =====
 
 def _procesar_pago(pago_id: int) -> Dict[str, Any]:
+    # Procesa un pago de forma asíncrona - Simula procesamiento con delay
     from sqlalchemy.orm import sessionmaker
     from . import create_app
     
