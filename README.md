@@ -405,23 +405,4 @@ La aplicación estará disponible en `http://localhost:5000`
 
 ---
 
-## 🤝 **Contribución**
-
-1. Fork del proyecto
-2. Crear feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit cambios (`git commit -m 'Add amazing feature'`)
-4. Push al branch (`git push origin feature/amazing-feature`)
-5. Abrir Pull Request
-
----
-
-## 📞 **Contacto y Soporte**
-
-Para consultas técnicas, reporte de bugs o sugerencias:
-- **Issues**: GitHub repository
-- **Documentation**: Wiki del proyecto
-- **Email**: equipo de desarrollo
-
----
-
 **LVT Inmuebles** - Transformando la gestión inmobiliaria con tecnología moderna y experiencia de usuario excepcional.
